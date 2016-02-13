@@ -4,23 +4,26 @@ import time
 import requests
 import thread
 import os
+from usb.core import USBError
 
 POST_URL = "https://influxdb.paas.high.am/write?db=rowlog"
 FIELDS = ['distance', 'spm', 'pace', 'calhr', 'power']
 
-def add_data_point(records, data, force):
+records = []
+
+def add_data_point(data, force):
+    global records
     field_values = ",".join(["{0}={1}".format(h, data[h]) for h in FIELDS])
     record = "performance,time={0} {1}".format(data['time'], field_values)
     print record
-
+    print len(records)
     records.append(record)
 
     if len(records) == 5:
 		aggr_records = "\n".join(records)
-        resp = requests.post(POST_URL, data=record, auth=('rowlogger', os.ENVIRON['ROWLOGGER_PASSWORD']), verify=False)
-        print "POSTED! {0}".format(resp)
-
-        records = []
+		resp = requests.post(POST_URL, data=aggr_records, auth=('rowlogger', os.environ['ROWLOGGER_PASSWORD']), verify=False)
+		print "POSTED! {0}".format(resp)
+		records = []
 
 if __name__ == "__main__":
 
@@ -34,7 +37,10 @@ if __name__ == "__main__":
             time.sleep(5)
 
         # get the first erg in the list
-        erg = pyrow.pyrow(ergs[0])
+        try:
+		erg = pyrow.pyrow(ergs[0])
+	except USBError:
+		pass
 
         print "Found an erg! {0}".format(erg)
 
@@ -46,7 +52,6 @@ if __name__ == "__main__":
             workout = erg.get_workout()
 
         print "Starting workout {0}".format(workout)
-        records = []
 
         # loop until workout ends
         while workout['state'] == 1:
@@ -74,7 +79,7 @@ if __name__ == "__main__":
             forceplot = erg.get_force_plot()
             force.extend(forceplot['forceplot'])
 
-            thread.start_new_thread(add_data_point, (records, monitor, force))
+            thread.start_new_thread(add_data_point, (monitor, force))
 
             forcedata = ",".join([str(f) for f in force])
 
