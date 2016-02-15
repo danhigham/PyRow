@@ -41,7 +41,7 @@ class pyrow(object):
             except:
                 print "EXCEPTION"
 
-        #Claim interface (Needs Testing To See If Necessary)
+        # Claim interface (Needs Testing To See If Necessary)
         usb.util.claim_interface(erg, INTERFACE)
 
         #Linux throws error, reason unknown
@@ -190,6 +190,8 @@ class pyrow(object):
 
         return status
 
+    def release(self):
+        usb.util.release_interface(self.erg, INTERFACE)
 
     def set_clock(self):
         """
